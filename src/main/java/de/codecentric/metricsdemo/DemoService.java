@@ -2,9 +2,11 @@ package de.codecentric.metricsdemo;
 
 import de.codecentric.metricsdemo.entity.Message;
 import de.codecentric.metricsdemo.repository.MessageRepository;
+import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.config.MeterFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.Random;
 
 @RestController
 public class DemoService {
@@ -49,7 +52,7 @@ public class DemoService {
         }
 
         try {
-            Message newMessage = this.repository.save(message);
+            Message newMessage = this.createMessageTimed(message);
 
             URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                     .path("/{id}")
@@ -80,6 +83,26 @@ public class DemoService {
     public ResponseEntity<Iterable<Message>> listMessages() {
         Iterable<Message> messages = this.repository.findAll();
         return ResponseEntity.ok(messages);
+    }
+
+    @Timed(description = "Duration of message creation")
+    private Message createMessageTimed(Message msg) {
+        Random rand = new Random();
+        rand.setSeed(System.currentTimeMillis());
+        int sleepBefore = (rand.nextInt() % 3) + 1;
+        int sleepAfter = (rand.nextInt() % 5) + 1;
+
+        try {
+            Thread.sleep(sleepBefore * 1000);
+            Message newMessage = this.repository.save(msg);
+            Thread.sleep(sleepAfter);
+
+            return newMessage;
+        } catch (InterruptedException ex) {
+            logger.error("Interrupted", ex);
+
+            return null;
+        }
     }
 
 }

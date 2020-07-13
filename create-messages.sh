@@ -1,12 +1,18 @@
 #!/bin/bash
 URL="http://metrics-demo-demo.apps.dbag.cc-openshift.de"
 COUNT=10
+SLEEP=0
 
-if [[ $? -gt 1 ]]; then
+if [[ $# -gt 0 ]]; then
     COUNT="$1"
 fi
 
-for i in $(seq 1 10); do
+if [[ $# -gt 1 ]]; then
+    SLEEP="$2"
+fi
+
+for i in $(seq 1 ${COUNT}); do
     curl "$URL/message" -d "{\"message\": \"message$i\", \"sender\": \"sender$i\", \"recipient\": \"recipient$i\"}" -H "Content-Type: application/json"
     echo
+    sleep ${SLEEP}
 done
