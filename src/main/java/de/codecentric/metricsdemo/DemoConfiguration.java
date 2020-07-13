@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.sql.DataSource;
+
 @Configuration
 public class DemoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(DemoConfiguration.class);
@@ -22,6 +24,12 @@ public class DemoConfiguration {
 
             return false;
         }));
+    }
+
+    @Bean
+    public DatasourceStatus datasourceStatus(DataSource dataSource) {
+        logger.info("called");
+        return new DatasourceStatus(dataSource);
     }
 
     @Bean
