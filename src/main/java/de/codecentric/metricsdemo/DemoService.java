@@ -46,6 +46,7 @@ public class DemoService {
     }
 
     @PostMapping("/message")
+    @Timed(description = "Duration of message creation")
     public ResponseEntity<Message> createMessage(@RequestBody Message message) {
         if (message == null || !message.validate()) {
             return ResponseEntity.badRequest().build();
@@ -85,15 +86,14 @@ public class DemoService {
         return ResponseEntity.ok(messages);
     }
 
-    @Timed(description = "Duration of message creation")
     private Message createMessageTimed(Message msg) {
         Random rand = new Random();
         rand.setSeed(System.currentTimeMillis());
-        int sleepBefore = (rand.nextInt() % 3) + 1;
-        int sleepAfter = (rand.nextInt() % 5) + 1;
+        long sleepBefore = (rand.nextLong() % 500);
+        long sleepAfter = (rand.nextLong() % 500);
 
         try {
-            Thread.sleep(sleepBefore * 1000);
+            Thread.sleep(sleepBefore);
             Message newMessage = this.repository.save(msg);
             Thread.sleep(sleepAfter);
 
