@@ -10,13 +10,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 public class DemoService {
 
-    private static Logger logger = LoggerFactory.getLogger(DemoService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DemoService.class);
 
     private final MessageRepository repository;
 
