@@ -2,6 +2,9 @@ package de.codecentric.metricsdemo;
 
 import de.codecentric.metricsdemo.entity.Message;
 import de.codecentric.metricsdemo.repository.MessageRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,9 +21,19 @@ public class DemoService {
     private static final Logger logger = LoggerFactory.getLogger(DemoService.class);
 
     private final MessageRepository repository;
+    private final MeterRegistry metrics;
 
-    public DemoService(@Autowired MessageRepository repository) {
+    private final Counter creationCounter;
+    private final Counter errorCounter;
+
+
+
+    public DemoService(@Autowired MessageRepository repository, @Autowired MeterRegistry registry) {
         this.repository = repository;
+        this.metrics = registry;
+
+        this.creationCounter = this.metrics.counter("messages_created_successful", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
+        this.errorCounter = this.metrics.counter("messages_created_error", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
     }
 
     @GetMapping("/message/{id}")
@@ -43,9 +56,11 @@ public class DemoService {
                     .buildAndExpand(newMessage.getId())
                     .toUri();
 
+            this.creationCounter.increment();
             return ResponseEntity.created(uri).body(newMessage);
         } catch (IllegalArgumentException ex) {
             logger.error("Got exception", ex);
+            this.errorCounter.increment();
             return ResponseEntity.badRequest().build();
         }
     }
