@@ -26,8 +26,8 @@ public class DemoService {
     private final MessageRepository repository;
     private final MeterRegistry metrics;
 
-    private final Counter creationCounter;
-    private final Counter errorCounter;
+//    private final Counter creationCounter;
+//    private final Counter errorCounter;
 
 
 
@@ -35,8 +35,8 @@ public class DemoService {
         this.repository = repository;
         this.metrics = registry;
 
-        this.creationCounter = this.metrics.counter("messages_created_successful", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
-        this.errorCounter = this.metrics.counter("messages_created_error", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
+//        this.creationCounter = this.metrics.counter("messages_created_successful", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
+//        this.errorCounter = this.metrics.counter("messages_created_error", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
     }
 
     @GetMapping("/message/{id}")
@@ -52,18 +52,18 @@ public class DemoService {
         }
 
         try {
-            Message newMessage = this.createMessageTimed(message);
+            Message newMessage = this.repository.save(message);
 
             URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                     .path("/{id}")
                     .buildAndExpand(newMessage.getId())
                     .toUri();
 
-            this.creationCounter.increment();
+//            this.creationCounter.increment();
             return ResponseEntity.created(uri).body(newMessage);
         } catch (IllegalArgumentException ex) {
             logger.error("Got exception", ex);
-            this.errorCounter.increment();
+//            this.errorCounter.increment();
             return ResponseEntity.badRequest().build();
         }
     }
@@ -83,25 +83,6 @@ public class DemoService {
     public ResponseEntity<Iterable<Message>> listMessages() {
         Iterable<Message> messages = this.repository.findAll();
         return ResponseEntity.ok(messages);
-    }
-
-    private Message createMessageTimed(Message msg) {
-        Random rand = new Random();
-        rand.setSeed(System.currentTimeMillis());
-        long sleepBefore = (Math.abs(rand.nextLong()) % 500);
-        long sleepAfter = (Math.abs(rand.nextLong()) % 500);
-
-        try {
-            Thread.sleep(sleepBefore);
-            Message newMessage = this.repository.save(msg);
-            Thread.sleep(sleepAfter);
-
-            return newMessage;
-        } catch (InterruptedException ex) {
-            logger.error("Interrupted", ex);
-
-            return null;
-        }
     }
 
 }

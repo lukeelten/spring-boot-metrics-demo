@@ -28,7 +28,6 @@ public class DemoConfiguration {
 
     @Bean
     public DatasourceStatus datasourceStatus(DataSource dataSource) {
-        logger.info("called");
         return new DatasourceStatus(dataSource);
     }
 
