@@ -24,19 +24,18 @@ public class DemoService {
     private static final Logger logger = LoggerFactory.getLogger(DemoService.class);
 
     private final MessageRepository repository;
-    private final MeterRegistry metrics;
+    private final MeterRegistry registry;
 
-//    private final Counter creationCounter;
-//    private final Counter errorCounter;
+    private Counter messagesCreated;
+    private Counter messagesError;
 
-
-
-    public DemoService(@Autowired MessageRepository repository, @Autowired MeterRegistry registry) {
+    @Autowired
+    public DemoService(MessageRepository repository, MeterRegistry registry) {
         this.repository = repository;
-        this.metrics = registry;
+        this.registry = registry;
 
-//        this.creationCounter = this.metrics.counter("messages_created_successful", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
-//        this.errorCounter = this.metrics.counter("messages_created_error", Tags.of("class", DemoService.class.getSimpleName(), "entity", Message.class.getSimpleName()));
+        this.messagesCreated = this.registry.counter("messages_created", Tags.of("type", "incoming"));
+        this.messagesError = this.registry.counter("messages_error", Tags.of("type", "incoming"));
     }
 
     @GetMapping("/message/{id}")
@@ -53,17 +52,17 @@ public class DemoService {
 
         try {
             Message newMessage = this.repository.save(message);
+            this.messagesCreated.increment();
 
             URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                     .path("/{id}")
                     .buildAndExpand(newMessage.getId())
                     .toUri();
 
-//            this.creationCounter.increment();
             return ResponseEntity.created(uri).body(newMessage);
         } catch (IllegalArgumentException ex) {
             logger.error("Got exception", ex);
-//            this.errorCounter.increment();
+            this.messagesError.increment();
             return ResponseEntity.badRequest().build();
         }
     }

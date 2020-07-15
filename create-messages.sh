@@ -1,5 +1,7 @@
 #!/bin/bash
-URL="http://metrics-demo-demo.apps.dbag.cc-openshift.de"
+#URL="http://metrics-demo-demo.apps.dbag.cc-openshift.de"
+
+URL="http://localhost:8080"
 COUNT=10
 SLEEP=0
 
