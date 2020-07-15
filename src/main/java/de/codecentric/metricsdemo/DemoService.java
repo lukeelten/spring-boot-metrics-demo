@@ -6,6 +6,7 @@ import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.config.MeterFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -26,8 +29,11 @@ public class DemoService {
     private final MessageRepository repository;
     private final MeterRegistry registry;
 
+    private List<Message> list;
+
     private Counter messagesCreated;
     private Counter messagesError;
+    private Timer timer;
 
     @Autowired
     public DemoService(MessageRepository repository, MeterRegistry registry) {
@@ -36,6 +42,11 @@ public class DemoService {
 
         this.messagesCreated = this.registry.counter("messages_created", Tags.of("type", "incoming"));
         this.messagesError = this.registry.counter("messages_error", Tags.of("type", "incoming"));
+        this.list = new ArrayList<>();
+
+        this.registry.gaugeCollectionSize("message_buffer_size", Tags.of("type", "buffered"), list);
+
+        timer = this.registry.timer("messages_created_duration", Tags.of("type", "incoming"));
     }
 
     @GetMapping("/message/{id}")
@@ -46,25 +57,28 @@ public class DemoService {
 
     @PostMapping("/message")
     public ResponseEntity<Message> createMessage(@RequestBody Message message) {
-        if (message == null || !message.validate()) {
-            return ResponseEntity.badRequest().build();
-        }
+        return timer.record(() -> {
+            if (message == null || !message.validate()) {
+                return ResponseEntity.badRequest().build();
+            }
 
-        try {
-            Message newMessage = this.repository.save(message);
-            this.messagesCreated.increment();
+            try {
+                Message newMessage = this.repository.save(message);
+                this.messagesCreated.increment();
+                list.add(newMessage);
 
-            URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
-                    .path("/{id}")
-                    .buildAndExpand(newMessage.getId())
-                    .toUri();
+                URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
+                        .path("/{id}")
+                        .buildAndExpand(newMessage.getId())
+                        .toUri();
 
-            return ResponseEntity.created(uri).body(newMessage);
-        } catch (IllegalArgumentException ex) {
-            logger.error("Got exception", ex);
-            this.messagesError.increment();
-            return ResponseEntity.badRequest().build();
-        }
+                return ResponseEntity.created(uri).body(newMessage);
+            } catch (IllegalArgumentException ex) {
+                logger.error("Got exception", ex);
+                this.messagesError.increment();
+                return ResponseEntity.badRequest().build();
+            }
+        });
     }
 
     @DeleteMapping("/message/{id}")
